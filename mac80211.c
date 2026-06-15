@@ -437,6 +437,22 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 		return 0;
 
 	SET_IEEE80211_DEV(hw, dev->dev);
+		/* ====================================================================
+	 * PARCHE DE MULTI-MAC POR HARDWARE PARA TU BANANA PI PRO8X
+	 * Evita el colapso a 3 dBm al dar a cada radio física su propia MAC
+	 * permanente en base a su slot del bus PCIe o al índice de su banda.
+	 * ==================================================================== */
+	if (phy->band_idx > 0) {
+		/* Incrementamos el último octeto [5] según la sub-radio indexada del chip concurrent */
+		phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
+	} else if (dev->dev && dev_name(dev->dev)) {
+		/* SEGURIDAD POR BUS INTERNO: Si detecta la segunda tarjeta física en pcie1, 
+		 * le sumamos un salto automático de +4 para evitar colisiones de vecinos */
+		if (strstr(dev_name(dev->dev), "11310000.pcie") || strstr(dev_name(dev->dev), "pci0000:01")) {
+			phy->macaddr[5] = (phy->macaddr[5] + 4) % 256;
+		}
+	}
+
 	SET_IEEE80211_PERM_ADDR(hw, phy->macaddr);
 
 	wiphy->features |= NL80211_FEATURE_ACTIVE_MONITOR |
