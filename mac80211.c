@@ -437,19 +437,19 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 		return 0;
 
 	SET_IEEE80211_DEV(hw, dev->dev);
-		/* ====================================================================
-	 * PARCHE DE MULTI-MAC POR HARDWARE PARA TU BANANA PI PRO8X
-	 * Evita el colapso a 3 dBm al dar a cada radio física su propia MAC
-	 * permanente en base a su slot del bus PCIe o al índice de su banda.
+
+	/* ====================================================================
+	 * PARCHE DE MULTI-MAC NATIVO POR BUS PCIE PARA DOBLE MT7927
+	 * Evita el bucle de panico en Canal 1 al dar a cada silicio fisico
+	 * una MAC permanente unica segun la ruta de su ranura M.2.
 	 * ==================================================================== */
-	if (phy->band_idx > 0) {
-		/* Incrementamos el último octeto [5] según la sub-radio indexada del chip concurrent */
-		phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
-	} else if (dev->dev && dev_name(dev->dev)) {
-		/* SEGURIDAD POR BUS INTERNO: Si detecta la segunda tarjeta física en pcie1, 
-		 * le sumamos un salto automático de +4 para evitar colisiones de vecinos */
+	if (dev->dev && dev_name(dev->dev)) {
 		if (strstr(dev_name(dev->dev), "11310000.pcie") || strstr(dev_name(dev->dev), "pci0000:01")) {
-			phy->macaddr[5] = (phy->macaddr[5] + 4) % 256;
+			/* Tarjeta 2 (Derecha): Sumamos un salto de +8 completo y el indice de la sub-radio */
+			phy->macaddr[5] = (phy->macaddr[5] + 8 + phy->band_idx) % 256;
+		} else {
+			/* Tarjeta 1 (Izquierda): Le damos su incremento nativo por sub-radio concurrente */
+			phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
 		}
 	}
 
@@ -613,6 +613,7 @@ int mt76_register_phy(struct mt76_phy *phy, bool vht,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(mt76_register_phy);
+
 
 void mt76_unregister_phy(struct mt76_phy *phy)
 {
