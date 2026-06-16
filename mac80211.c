@@ -437,26 +437,23 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 	if ((void *)phy != hw->priv)
 		return 0;
 
-	SET_IEEE80211_DEV(hw, dev->dev);
+		SET_IEEE80211_DEV(hw, dev->dev);
 
 	/* ====================================================================
-	 * PARCHE DE MULTI-MAC INMUTABLE POR BUS PCI PARA TU BANANA PI PRO8X
-	 * Interroga la estructura nativa PCI para inyectar offsets estables.
+	 * PARCHE DE SEPARACIÓN ABSOLUTA POR MEMORIA PARA DOBLE MT7927
+	 * Evita el Crash de wiphy_register calculando un offset inmutable 
+	 * basado en la dirección física del puntero 'hw' en el Kernel.
 	 * ==================================================================== */
-	if (dev->dev && dev_is_pci(dev->dev)) {
-		struct pci_dev *pdev = to_pci_dev(dev->dev);
-		
-		/* Comprobamos si el dispositivo pertenece al bus 1 (Ranura PCIe de la derecha) */
-		if (pci_domain_nr(pdev->bus) == 1 || pdev->bus->number == 1) {
-			/* Tarjeta 2 (Derecha): Salto base de +8 completo e incremento secuencial por sub-radio */
-			phy->macaddr[5] = (phy->macaddr[5] + 8 + phy->band_idx) % 256;
+	if (hw) {
+		/* Usamos la dirección de memoria del puntero 'hw' como semilla única:
+		 * Si la dirección es impar o superior por el mapeo del segundo slot PCIe,
+		 * le metemos un salto drástico de +16 para aislar el bloque de MACs. */
+		uintptr_t hw_addr = (uintptr_t)hw;
+		if ((hw_addr & 0x1000) || phy->band_idx > 1) {
+			phy->macaddr = (phy->macaddr + 16 + phy->band_idx) % 256;
 		} else {
-			/* Tarjeta 1 (Izquierda): Mantiene su incremento nativo por sub-radio concurrente */
-			phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
+			phy->macaddr = (phy->macaddr + phy->band_idx) % 256;
 		}
-	} else {
-		/* Fail-safe si no detecta bus PCI compatible */
-		phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
 	}
 
 	SET_IEEE80211_PERM_ADDR(hw, phy->macaddr);
