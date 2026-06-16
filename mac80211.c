@@ -434,10 +434,10 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 	spin_lock_init(&phy->tx_lock);
 	INIT_DELAYED_WORK(&phy->roc_work, mt76_roc_complete_work);
 
-	if ((void *)phy != hw->priv)
+		if ((void *)phy != hw->priv)
 		return 0;
 
-		SET_IEEE80211_DEV(hw, dev->dev);
+	SET_IEEE80211_DEV(hw, dev->dev);
 
 	/* ====================================================================
 	 * PARCHE DE SEPARACIÓN ABSOLUTA POR MEMORIA PARA DOBLE MT7927
@@ -447,12 +447,12 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 	if (hw) {
 		/* Usamos la dirección de memoria del puntero 'hw' como semilla única:
 		 * Si la dirección es impar o superior por el mapeo del segundo slot PCIe,
-		 * le metemos un salto drástico de +16 para aislar el bloque de MACs. */
+		 * le metemos un salto drástico de +16 al último octeto para aislar las MACs. */
 		uintptr_t hw_addr = (uintptr_t)hw;
 		if ((hw_addr & 0x1000) || phy->band_idx > 1) {
-			phy->macaddr = (phy->macaddr + 16 + phy->band_idx) % 256;
+			phy->macaddr[5] = (phy->macaddr[5] + 16 + phy->band_idx) % 256;
 		} else {
-			phy->macaddr = (phy->macaddr + phy->band_idx) % 256;
+			phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
 		}
 	}
 
