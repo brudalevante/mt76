@@ -4,6 +4,7 @@
  */
 #include <linux/sched.h>
 #include <linux/of.h>
+#include <linux/pci.h>  // <-- Asegúrate de que esta cabecera PCI esté metida aquí arriba
 #include "mt76.h"
 
 #define CHAN2G(_idx, _freq) {			\
@@ -439,18 +440,23 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 	SET_IEEE80211_DEV(hw, dev->dev);
 
 	/* ====================================================================
-	 * PARCHE DE MULTI-MAC NATIVO POR BUS PCIE PARA DOBLE MT7927
-	 * Evita el bucle de panico en Canal 1 al dar a cada silicio fisico
-	 * una MAC permanente unica segun la ruta de su ranura M.2.
+	 * PARCHE DE MULTI-MAC INMUTABLE POR BUS PCI PARA TU BANANA PI PRO8X
+	 * Interroga la estructura nativa PCI para inyectar offsets estables.
 	 * ==================================================================== */
-	if (dev->dev && dev_name(dev->dev)) {
-		if (strstr(dev_name(dev->dev), "11310000.pcie") || strstr(dev_name(dev->dev), "pci0000:01")) {
-			/* Tarjeta 2 (Derecha): Sumamos un salto de +8 completo y el indice de la sub-radio */
+	if (dev->dev && dev_is_pci(dev->dev)) {
+		struct pci_dev *pdev = to_pci_dev(dev->dev);
+		
+		/* Comprobamos si el dispositivo pertenece al bus 1 (Ranura PCIe de la derecha) */
+		if (pci_domain_nr(pdev->bus) == 1 || pdev->bus->number == 1) {
+			/* Tarjeta 2 (Derecha): Salto base de +8 completo e incremento secuencial por sub-radio */
 			phy->macaddr[5] = (phy->macaddr[5] + 8 + phy->band_idx) % 256;
 		} else {
-			/* Tarjeta 1 (Izquierda): Le damos su incremento nativo por sub-radio concurrente */
+			/* Tarjeta 1 (Izquierda): Mantiene su incremento nativo por sub-radio concurrente */
 			phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
 		}
+	} else {
+		/* Fail-safe si no detecta bus PCI compatible */
+		phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
 	}
 
 	SET_IEEE80211_PERM_ADDR(hw, phy->macaddr);
