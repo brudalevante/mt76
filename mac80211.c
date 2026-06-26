@@ -434,22 +434,22 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 	spin_lock_init(&phy->tx_lock);
 	INIT_DELAYED_WORK(&phy->roc_work, mt76_roc_complete_work);
 
-		if ((void *)phy != hw->priv)
+			if ((void *)phy != hw->priv)
 		return 0;
 
-		SET_IEEE80211_DEV(hw, dev->dev);
+	SET_IEEE80211_DEV(hw, dev->dev);
 
 	/* ====================================================================
 	 * PARCHE DE MULTI-MAC POR HARDWARE PARA TU BANANA PI PRO8X
 	 * Evita el colapso a 3 dBm al dar a cada radio física su propia MAC
 	 * permanente en base a su slot del bus PCIe o al índice de su banda.
-	 * PROTEGIDO CONTRA CRASH DE PUNTEROS NULOS EN KERNEL 6.12
+	 * BLINDADO CONTRA CRASH DE PUNTEROS NULOS EN KERNEL 6.12
 	 * ==================================================================== */
 	if (phy->band_idx > 0) {
 		/* Incrementamos el último octeto según la sub-radio indexada del chip concurrent */
 		phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
 	} else if (dev && dev->pdev) {
-		/* SEGURIDAD POR BUS PADRE PCIE: Validamos el dominio secundario de forma segura */
+		/* SEGURIDAD POR BUS PADRE PCIE: Validamos el dominio secundario de forma inmutable */
 		struct pci_dev *pdev = dev->pdev;
 		if (pdev->bus && pdev->bus->number == 1) {
 			/* Si la tarjeta cuelga del segundo bus PCIe (dominio 0001:01), aplicamos el salto */
