@@ -440,19 +440,18 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 	SET_IEEE80211_DEV(hw, dev->dev);
 
 	/* ====================================================================
-	 * PARCHE DE SEPARACIÓN ABSOLUTA POR MEMORIA PARA DOBLE MT7927
-	 * Evita el Crash de wiphy_register calculando un offset inmutable 
-	 * basado en la dirección física del puntero 'hw' en el Kernel.
+	 * PARCHE DE MULTI-MAC POR HARDWARE PARA TU BANANA PI PRO8X
+	 * Evita el colapso a 3 dBm al dar a cada radio física su propia MAC
+	 * permanente en base a su slot del bus PCIe o al índice de su banda.
 	 * ==================================================================== */
-	if (hw) {
-		/* Usamos la dirección de memoria del puntero 'hw' como semilla única:
-		 * Si la dirección es impar o superior por el mapeo del segundo slot PCIe,
-		 * le metemos un salto drástico de +16 al último octeto para aislar las MACs. */
-		uintptr_t hw_addr = (uintptr_t)hw;
-		if ((hw_addr & 0x1000) || phy->band_idx > 1) {
-			phy->macaddr[5] = (phy->macaddr[5] + 16 + phy->band_idx) % 256;
-		} else {
-			phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
+	if (phy->band_idx > 0) {
+		/* Incrementamos el último octeto [5] según la sub-radio indexada del chip concurrent */
+		phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
+	} else if (dev->dev && dev_name(dev->dev)) {
+		/* SEGURIDAD POR BUS INTERNO: Si detecta la segunda tarjeta física en pcie1, 
+		 * le sumamos un salto automático de +4 para evitar colisiones de vecinos */
+		if (strstr(dev_name(dev->dev), "11310000.pcie") || strstr(dev_name(dev->dev), "pci0001:01") || strstr(dev_name(dev->dev), "0001:01")) {
+			phy->macaddr[5] = (phy->macaddr[5] + 4) % 256;
 		}
 	}
 
