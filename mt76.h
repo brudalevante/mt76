@@ -1304,7 +1304,7 @@ static inline int mt76_wed_dma_setup(struct mt76_dev *dev, struct mt76_queue *q,
 static inline struct mt76_dev *mt76_wed_to_dev(struct mtk_wed_device *wed)
 {
 #ifdef CONFIG_NET_MEDIATEK_SOC_WED
-	if (0)
+	if (wed->wlan.hif2)
 		return container_of(wed, struct mt76_dev, mmio.wed_hif2);
 #endif /* CONFIG_NET_MEDIATEK_SOC_WED */
 	return container_of(wed, struct mt76_dev, mmio.wed);
