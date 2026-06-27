@@ -434,7 +434,7 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 	spin_lock_init(&phy->tx_lock);
 	INIT_DELAYED_WORK(&phy->roc_work, mt76_roc_complete_work);
 
-		f ((void *)phy != hw->priv)
+		if ((void *)phy != hw->priv)
 		return 0;
 
 	SET_IEEE80211_DEV(hw, dev->dev);
