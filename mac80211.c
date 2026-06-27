@@ -617,7 +617,6 @@ int mt76_register_phy(struct mt76_phy *phy, bool vht,
 }
 EXPORT_SYMBOL_GPL(mt76_register_phy);
 
-
 void mt76_unregister_phy(struct mt76_phy *phy)
 {
 	struct mt76_dev *dev = phy->dev;
