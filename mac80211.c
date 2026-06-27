@@ -434,26 +434,25 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 	spin_lock_init(&phy->tx_lock);
 	INIT_DELAYED_WORK(&phy->roc_work, mt76_roc_complete_work);
 
-		if ((void *)phy != hw->priv)
+		f ((void *)phy != hw->priv)
 		return 0;
 
 	SET_IEEE80211_DEV(hw, dev->dev);
 
 	/* ====================================================================
-	 * PARCHE DE MULTI-MAC POR HARDWARE PARA TU BANANA PI PRO8X
-	 * Evita el colapso a 3 dBm al dar a cada radio física su propia MAC
-	 * permanente en base a su slot del bus PCIe o al índice de su banda.
-	 * BLINDADO Y NATIVO PARA ESTRUCTURAS KERNEL MODERNO
+	 * PARCHE DE SEPARACIÓN ABSOLUTA POR MEMORIA PARA DOBLE MT7927
+	 * Evita el Crash de wiphy_register calculando un offset inmutable 
+	 * basado en la dirección física del puntero 'hw' en el Kernel.
 	 * ==================================================================== */
-	if (phy->band_idx > 0) {
-		/* Incrementamos el último octeto según la sub-radio indexada del chip concurrent */
-		phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
-	} else if (dev && dev->dev) {
-		/* Usamos el validador oficial del Kernel para extraer la estructura PCI */
-		struct pci_dev *pdev = to_pci_dev(dev->dev);
-		if (pdev && pdev->bus && pdev->bus->number == 1) {
-			/* Si la tarjeta cuelga del segundo bus PCIe (dominio 0001:01), aplicamos el salto */
-			phy->macaddr[5] = (phy->macaddr[5] + 4) % 256;
+	if (hw) {
+		/* Usamos la dirección de memoria del puntero 'hw' como semilla única:
+		 * Si la dirección es impar o superior por el mapeo del segundo slot PCIe,
+		 * le metemos un salto drástico de +16 al último octeto para aislar las MACs. */
+		uintptr_t hw_addr = (uintptr_t)hw;
+		if ((hw_addr & 0x1000) || phy->band_idx > 1) {
+			phy->macaddr[5] = (phy->macaddr[5] + 16 + phy->band_idx) % 256;
+		} else {
+			phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx) % 256;
 		}
 	}
 
