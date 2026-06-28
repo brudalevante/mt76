@@ -437,21 +437,6 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 		if ((void *)phy != hw->priv)
 		return 0;
 	SET_IEEE80211_DEV(hw, dev->dev);
-
-	/* SEPARACIÓN MAC DOBLE MT7927 POR PCI DOMAIN - ESTABLE CON KASLR */
-	{
-		struct pci_dev *pdev = NULL;
-		u8 pci_offset = 0;
-
-		if (dev->dev && dev->dev->bus == &pci_bus_type)
-			pdev = to_pci_dev(dev->dev);
-
-		if (pdev && pci_domain_nr(pdev->bus) == 1)
-			pci_offset = 8;
-
-		phy->macaddr[5] = (phy->macaddr[5] + phy->band_idx + pci_offset) % 256;
-	}
-
 	SET_IEEE80211_PERM_ADDR(hw, phy->macaddr);
 
 	wiphy->features |= NL80211_FEATURE_ACTIVE_MONITOR |
