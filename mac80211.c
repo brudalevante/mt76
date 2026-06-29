@@ -436,6 +436,7 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 
 		if ((void *)phy != hw->priv)
 		return 0;
+	
 	SET_IEEE80211_DEV(hw, dev->dev);
 
 	* PARCHE DE SEPARACIÓN ABSOLUTA POR MEMORIA PARA DOBLE MT7927
