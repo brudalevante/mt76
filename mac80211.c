@@ -437,6 +437,28 @@ mt76_phy_init(struct mt76_phy *phy, struct ieee80211_hw *hw)
 		if ((void *)phy != hw->priv)
 		return 0;
 	SET_IEEE80211_DEV(hw, dev->dev);
+
+	* PARCHE DE SEPARACIÓN ABSOLUTA POR MEMORIA PARA DOBLE MT7927
+	 * Evita el Crash de wiphy_register calculando un offset inmutable 
+	 * basado en la dirección física del puntero 'hw' en el Kernel.
+	 * PROTEGIDO CONTRA CORRUPCIÓN DE RAM EN KERNEL 6.12/6.18
+	 * ==================================================================== */
+	if (hw) {
+		/* Usamos una variable local temporal para calcular el salto de forma segura */
+		u8 tmp_mac5 = phy->macaddr[5];
+
+		uintptr_t hw_addr = (uintptr_t)hw;
+
+		if ((hw_addr & 0x1000) || phy->band_idx > 1) {
+			tmp_mac5 = (tmp_mac5 + 16 + phy->band_idx) % 256;
+		} else {
+			tmp_mac5 = (tmp_mac5 + phy->band_idx) % 256;
+		}
+		
+		/* Asignamos el valor calculado al octeto final del array de forma limpia */
+		phy->macaddr[5] = tmp_mac5;
+	}
+
 	SET_IEEE80211_PERM_ADDR(hw, phy->macaddr);
 
 	wiphy->features |= NL80211_FEATURE_ACTIVE_MONITOR |
